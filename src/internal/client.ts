@@ -423,6 +423,7 @@ export class TypedClient {
   protected getRequestOptions(
     opts: RequestOption & {
       region: string
+      host?: string
     },
   ): IRequest & {
     host: string
@@ -434,6 +435,7 @@ export class TypedClient {
     let objectName = opts.objectName
     const headers = opts.headers
     const query = opts.query
+    let host = (opts.host || this.host) as string
 
     let reqOptions = {
       method,
@@ -446,11 +448,10 @@ export class TypedClient {
     // Verify if virtual host supported.
     let virtualHostStyle
     if (bucketName) {
-      virtualHostStyle = isVirtualHostStyle(this.host, this.protocol, bucketName, this.pathStyle)
+      virtualHostStyle = isVirtualHostStyle(host, this.protocol, bucketName, this.pathStyle)
     }
 
     let path = '/'
-    let host = this.host
 
     let port: undefined | number
     if (this.port) {
@@ -2866,6 +2867,7 @@ export class TypedClient {
     expires?: number | PreSignRequestParams | undefined,
     reqParams?: PreSignRequestParams | Date,
     requestDate?: Date,
+    targetHost?: string,
   ): Promise<string> {
     if (this.anonymous) {
       throw new errors.AnonymousRequestError(`Presigned ${method} url cannot be generated for anonymous requests`)
@@ -2897,7 +2899,7 @@ export class TypedClient {
     try {
       const region = await this.getBucketRegionAsync(bucketName)
       await this.checkAndRefreshCreds()
-      const reqOptions = this.getRequestOptions({ method, region, bucketName, objectName, query })
+      const reqOptions = this.getRequestOptions({ method, region, bucketName, objectName, query, host: targetHost })
 
       return presignSignatureV4(
         reqOptions,
@@ -2923,6 +2925,7 @@ export class TypedClient {
     expires?: number,
     respHeaders?: PreSignRequestParams | Date,
     requestDate?: Date,
+    targetHost?: string,
   ): Promise<string> {
     if (!isValidBucketName(bucketName)) {
       throw new errors.InvalidBucketNameError('Invalid bucket name: ' + bucketName)
@@ -2945,10 +2948,15 @@ export class TypedClient {
         throw new TypeError(`response header ${header} should be of type "string"`)
       }
     })
-    return this.presignedUrl('GET', bucketName, objectName, expires, respHeaders, requestDate)
+    return this.presignedUrl('GET', bucketName, objectName, expires, respHeaders, requestDate, targetHost)
   }
 
-  async presignedPutObject(bucketName: string, objectName: string, expires?: number): Promise<string> {
+  async presignedPutObject(
+    bucketName: string,
+    objectName: string,
+    expires?: number,
+    targetHost?: string,
+  ): Promise<string> {
     if (!isValidBucketName(bucketName)) {
       throw new errors.InvalidBucketNameError(`Invalid bucket name: ${bucketName}`)
     }
@@ -2956,7 +2964,7 @@ export class TypedClient {
       throw new errors.InvalidObjectNameError(`Invalid object name: ${objectName}`)
     }
 
-    return this.presignedUrl('PUT', bucketName, objectName, expires)
+    return this.presignedUrl('PUT', bucketName, objectName, expires, undefined, undefined, targetHost)
   }
 
   newPostPolicy(): PostPolicy {

@@ -1161,6 +1161,17 @@ describe('functional tests', function () {
     )
 
     step(
+      `presignedPutObject(bucketName, objectName, undefined, 'test.minio.com')_bucketName:${bucketName}, objectName:${_1byteObjectName}_`,
+      (done) => {
+        // Putting the same object should not cause any error
+        client
+          .presignedPutObject(bucketName, _1byteObjectName, undefined, 'test.minio.com')
+          .then(() => done())
+          .catch(done)
+      },
+    )
+
+    step(
       `presignedGetObject(bucketName, objectName, expires, cb)_bucketName:${bucketName}, objectName:${_1byteObjectName}, expires:1000_`,
       (done) => {
         client.presignedGetObject(bucketName, _1byteObjectName, 1000, (e, presignedUrl) => {
@@ -3724,13 +3735,13 @@ describe('functional tests', function () {
     const metadata = { 'X-Amz-Meta-Test': 'test-value' }
 
     before(() => {
-      return client.makeBucket(bucketName, '').then((res) => {
-        return client.putObject(bucketName, objectName, fdObject, fdObject.length, metadata).then((res) => {
+      return client.makeBucket(bucketName, '').then(() => {
+        return client.putObject(bucketName, objectName, fdObject, fdObject.length, metadata).then(() => {
           return client.setObjectTagging(bucketName, objectName, tags)
         })
       })
     })
-    after(() => client.removeObject(bucketName, objectName).then((_) => client.removeBucket(bucketName)))
+    after(() => client.removeObject(bucketName, objectName).then(() => client.removeBucket(bucketName)))
 
     step(
       `extensions.listObjectsV2WithMetadata(bucketName, prefix, recursive)_bucketName:${bucketName}, prefix:"", recursive:true`,
